@@ -1,5 +1,9 @@
 package pt314.blocks.game;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Scanner;
+
 public class GameBoard {
 
 	private int width;
@@ -99,6 +103,179 @@ public class GameBoard {
 		if (col < 0 || col >= width)
 			return false;
 		return true;
+	}
+	
+	/**
+	 * Check if Target Block in Rightmost column
+	 */
+	public boolean isTargetAtExit() {
+		for(int r=0; r<height; r++)
+			if(blocks[r][width-1] instanceof TargetBlock)
+				return true;
+		
+		return false;
+	}
+	
+	/**
+	 * Load puzzle according to given file
+	 */
+	public void loadPuzzle(File puzzleFile) throws NullPointerException, FileNotFoundException, IllegalStateException {
+		if(puzzleFile == null)
+			throw new NullPointerException("Error Loading File - Null Value Given.");
+		
+		try {
+			String[][] newBoard = readPuzzle(puzzleFile);
+			validateBoard(newBoard);
+			initBoard(newBoard);
+		}
+		catch(IllegalStateException e) {
+			throw new IllegalStateException (e.getMessage());
+		}
+		catch(FileNotFoundException e) {
+			throw new FileNotFoundException(e.getMessage());
+		}
+		catch(Exception e) {
+			throw new IllegalStateException("Error Loading Puzzle File.  Invalid File Format.");
+		}
+	}
+	
+	/**
+	 * Read puzzle file
+	 */
+	private String[][] readPuzzle(File puzzleFile) throws IllegalStateException, FileNotFoundException {
+		String[][] newBoard = null;
+		Scanner fileScan = null, rowScan = null;
+		try {
+			fileScan = new Scanner(puzzleFile);
+			String line1 = fileScan.nextLine();
+			rowScan = new Scanner(line1);
+			int rows = Integer.parseInt(rowScan.next());
+			int cols = Integer.parseInt(rowScan.next());
+			newBoard = new String[rows][cols];
+			for(int r=0; r<rows; r++) {
+				String boardLine = fileScan.nextLine();
+				for(int c=0; c<cols; c++) {
+					String block = boardLine.substring(c,c+1);
+						newBoard[r][c] = block;
+				}
+			}
+		}
+		catch(FileNotFoundException e) {
+			throw new FileNotFoundException("File Not Found.");
+		}
+		catch(Exception e) {
+			throw new IllegalStateException("Error Reading Puzzle File.");
+		}
+		finally {
+			if(fileScan != null)
+				fileScan.close();
+			if(rowScan != null)
+				rowScan.close();
+		}
+		
+		return newBoard;
+	}
+	
+	/**
+	 * Validate new board fits appropriate characteristics 
+	 */
+	private void validateBoard(String[][] newBoard) throws IllegalStateException {
+		if(newBoard.length < 1 || newBoard[0].length < 1)
+			throw new IllegalStateException("Invalid Board Size. Board must be at least 1x1.");
+		
+		if(!validateBlocks(newBoard))
+			throw new IllegalStateException("Invalid Board.");
+		
+		if(!validateTargetBlock(newBoard, newBoard.length, newBoard[0].length))
+			throw new IllegalStateException("Target Block is not the Right-most Block");
+		
+		if(!hasOneTarget(newBoard))
+			throw new IllegalStateException("Invalid Board. One Target Block is needed for each board.");
+	}
+	
+	/**
+	 * Validate valid blocks
+	 */
+	private boolean validateBlocks(String[][] newBoard) throws IllegalStateException {
+		boolean retVal = true;
+		for(int r=0; r<newBoard.length; r++)
+			for(int c=0; c<newBoard[0].length; c++) {
+				switch(newBoard[r][c]) {
+				case "H" :
+					break;
+				case "V" :
+					break;
+				case "T" :
+					break;
+				case "." :
+					break;
+				default :
+					retVal = false;
+				}
+			}
+		
+		return retVal;
+	}
+	
+	/**
+	 * Validate target block can exit
+	 */
+	private boolean validateTargetBlock(String[][] newBoard, int row, int col) {
+		boolean retVal = true;
+		for(int c=col; c<newBoard[0].length; c++) {
+			if(newBoard[row][c].equals("H")) {	//should not have a horizontal block right of target block
+				retVal = false;
+				break;
+			}
+		}
+		
+		return retVal;
+	}
+	
+	/**
+	 * Validate number of target blocks
+	 */
+	private boolean hasOneTarget(String[][] newBoard) {
+		int targetCount = 0;
+		
+		for(int r=0; r<newBoard.length; r++)
+			for(int c=0; c<newBoard[0].length; c++)
+				if(newBoard[r][c].equals("T"))
+					targetCount++;
+		
+		if(targetCount == 1)
+			return true;
+		else
+			return false;
+	}
+	
+	/**
+	 * Initialize new board
+	 */
+	private void initBoard(String[][] newBoard) {
+		int rows = newBoard.length;
+		int cols = newBoard[0].length;
+		blocks = new Block[rows][cols];
+		for(int r=0; r<rows; r++)
+			for(int c=0; c<cols; c++) {
+				switch(newBoard[r][c]) {
+				case "H" :
+					blocks[r][c] = new HorizontalBlock();
+					break;
+				case "V" :
+					blocks[r][c] = new VerticalBlock();
+					break;
+				case "T" :
+					blocks[r][c] = new TargetBlock();
+					break;
+				case "." :
+					blocks[r][c] = null;
+					break;
+				}
+			}
+		
+		width = cols;
+		height = rows;
 	}
 
 	/**

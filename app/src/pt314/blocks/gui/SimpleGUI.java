@@ -5,13 +5,19 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileNotFoundException;
 
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.border.BevelBorder;
+import javax.swing.border.Border;
 
 import pt314.blocks.game.Block;
 import pt314.blocks.game.Direction;
@@ -40,6 +46,7 @@ public class SimpleGUI extends JFrame implements ActionListener {
 	private JMenuBar menuBar;
 	private JMenu gameMenu, helpMenu;
 	private JMenuItem newGameMenuItem;
+	private JMenuItem loadPuzzleMenuItem;
 	private JMenuItem exitMenuItem;
 	private JMenuItem aboutMenuItem;
 	
@@ -72,6 +79,15 @@ public class SimpleGUI extends JFrame implements ActionListener {
 			}
 		});
 		gameMenu.add(newGameMenuItem);
+		
+		loadPuzzleMenuItem = new JMenuItem("Load Puzzle");
+		loadPuzzleMenuItem.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				loadPuzzle();
+			}
+		});
+		gameMenu.add(loadPuzzleMenuItem);
 		
 		gameMenu.addSeparator();
 		
@@ -121,22 +137,55 @@ public class SimpleGUI extends JFrame implements ActionListener {
 		
 		updateUI();
 	}
+	
+	private void loadPuzzle() {
+		JFileChooser fileSelector = new JFileChooser("");
+		int openState = fileSelector.showOpenDialog(null);
+		if(openState == JFileChooser.APPROVE_OPTION) {
+			File puzzleFile = fileSelector.getSelectedFile();
+			try {
+				board.loadPuzzle(puzzleFile);
+				updateUI();
+			}
+			catch(NullPointerException e) {
+				JOptionPane.showMessageDialog(SimpleGUI.this, e.getMessage());
+			}
+			catch(FileNotFoundException e) {
+				JOptionPane.showMessageDialog(SimpleGUI.this, e.getMessage());
+			}
+			catch(IllegalStateException e) {
+				JOptionPane.showMessageDialog(SimpleGUI.this, e.getMessage());
+			}
+		}
+		
+	}
 
 	// Update display based on the state of the board...
 	// TODO: make this more efficient
 	private void updateUI() {
+		Border blockBorder = BorderFactory.createBevelBorder(BevelBorder.LOWERED, Color.BLACK, Color.WHITE);
+		Border emptyBorder = BorderFactory.createLineBorder(Color.GRAY, 1);
+		Color horizontalColor = new Color(210,180,40);	//tan
+		Color verticalColor = Color.RED;
+		Color targetColor = Color.BLUE;
+		
 		for (int row = 0; row < NUM_ROWS; row++) {
 			for (int col = 0; col < NUM_COLS; col++) {
 				Block block = board.getBlockAt(row, col);
 				JButton cell = buttonGrid[row][col];
-				if (block == null)
+				if (block == null) {
+					cell.setBorder(emptyBorder);
 					cell.setBackground(Color.LIGHT_GRAY);
-				else if (block instanceof TargetBlock)
-					cell.setBackground(Color.YELLOW);
-				else if (block instanceof HorizontalBlock)
-					cell.setBackground(Color.BLUE);
-				else if (block instanceof VerticalBlock)
-					cell.setBackground(Color.RED);
+				}
+				else {
+					cell.setBorder(blockBorder);
+					if (block instanceof TargetBlock)
+						cell.setBackground(targetColor);
+					else if (block instanceof HorizontalBlock)
+						cell.setBackground(horizontalColor);
+					else if (block instanceof VerticalBlock)
+						cell.setBackground(verticalColor);
+				}
 			}
 		}
 	}
@@ -211,6 +260,8 @@ public class SimpleGUI extends JFrame implements ActionListener {
 		else {
 			selectedBlock = null;
 			updateUI();
+			if(board.isTargetAtExit())	//end of game
+				JOptionPane.showMessageDialog(SimpleGUI.this, "Victory! Target Block has reached the exit row.");
 		}
 	}
 
